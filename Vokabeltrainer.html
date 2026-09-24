@@ -130,6 +130,15 @@
   .session-done { text-align: center; padding: 40px 20px; }
   .session-done .big { font-size: 2.5rem; margin-bottom: 8px; }
 
+  .gap-box { width: 100%; max-width: 480px; background: white; border-radius: 18px; padding: 28px 24px; box-shadow: var(--shadow); position: relative; }
+  .lang-tag-static { font-size: 0.75rem; font-weight: 700; color: var(--muted); letter-spacing: 0.05em; margin-bottom: 14px; }
+  .gap-sentence { font-size: 1.25rem; font-weight: 600; line-height: 1.5; margin-bottom: 8px; }
+  .gap-tip { font-size: 0.85rem; color: var(--primary); background: #eef0ff; padding: 8px 10px; border-radius: 8px; margin: 10px 0; }
+  .gap-input { margin-top: 14px; font-size: 1.05rem; }
+  .gap-feedback { border-radius: 10px; padding: 12px 14px; margin-top: 14px; font-size: 0.95rem; line-height: 1.6; }
+  .gap-feedback.correct { background: var(--green-bg); color: var(--green); }
+  .gap-feedback.incorrect { background: var(--red-bg); color: var(--red); }
+  select.type-select { font-family: inherit; font-size: 0.85rem; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--border); background: white; color: var(--text); }
   .top-back { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
   .top-back h2 { margin: 0; font-size: 1.3rem; }
   .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
@@ -149,6 +158,9 @@
     .flip-face { background: #1e2030; }
     .flip-face.back { background: #20233a; }
     .modal { background: #1e2030; }
+    .gap-box { background: #1e2030; }
+    .gap-tip { background: #262a45; }
+    select.type-select { background: #262838; }
   }
 </style>
 </head>
@@ -190,10 +202,57 @@
   }
 
   function mkCard(de, en) {
-    return { id: uid(), de: de, en: en, streak: 0, seen: 0 };
+    return { id: uid(), type: "vocab", de: de, en: en, streak: 0, seen: 0 };
+  }
+
+  function mkGapCard(prompt, answer, note) {
+    return { id: uid(), type: "gap", de: prompt, en: answer, note: note || "", streak: 0, seen: 0 };
+  }
+
+  function normalizeAnswer(s) {
+    return (s || "").toLowerCase().trim().replace(/[.!?]+$/g, "").replace(/\s+/g, " ");
   }
 
   var state = loadState() || defaultState();
+  seedWeaknessDeck();
+
+  function seedWeaknessDeck() {
+    if (state.seededKlausurFeedback) return;
+    state.seededKlausurFeedback = true;
+    var deck = {
+      id: uid(),
+      name: "Meine Schwächen (Klausur-Übung)",
+      cards: [
+        mkGapCard("What ___ you do at the weekend?", "do", "W-Frage im Simple Present: Hilfsverb nicht vergessen!"),
+        mkGapCard("Where ___ he go yesterday?", "did", "W-Frage im Simple Past: Hilfsverb nicht vergessen!"),
+        mkGapCard("How often ___ she check her emails?", "does", "W-Frage, 3. Person Singular: Hilfsverb nicht vergessen!"),
+        mkGapCard("I look forward to ___ (see) you soon.", "seeing", "Nach 'look forward to' folgt ein Verb mit -ing (Gerundium)."),
+        mkGapCard("Instead of ___ (complain), you should try to solve the problem.", "complaining", "Nach 'instead of' folgt ein Verb mit -ing (Gerundium)."),
+        mkGapCard("She is interested in ___ (learn) English.", "learning", "Nach Präpositionen (in, on, about...) folgt ein Verb mit -ing."),
+        mkGapCard("The letter ___ (write) yesterday.", "was written", "Passiv im Simple Past: was/were + 3. Form."),
+        mkGapCard("The goods ___ (order) last week.", "were ordered", "Passiv im Simple Past: was/were + 3. Form."),
+        mkGapCard("If it rains tomorrow, we ___ (stay) at home.", "will stay", "1. Conditional: if + Present, ... will + Verb."),
+        mkGapCard("If you send the email now, she ___ (receive) it today.", "will receive", "1. Conditional: if + Present, ... will + Verb."),
+        mkGapCard("I have already ___ (see) that movie.", "seen", "Unregelmäßiges Partizip Perfekt: see - saw - seen."),
+        mkGapCard("She has ___ (grow) a lot since last year.", "grown", "Unregelmäßiges Partizip Perfekt: grow - grew - grown."),
+        mkGapCard("They have ___ (write) three letters.", "written", "Unregelmäßiges Partizip Perfekt: write - wrote - written."),
+        mkGapCard("He speaks English very ___ (good).", "well", "Unregelmäßiges Adverb: good (Adjektiv) → well (Adverb)."),
+        mkGapCard("She was ___ (terrible) upset about the news.", "terribly", "Adverb bildet man meist mit -ly: terrible → terribly."),
+        mkGapCard("The printer works almost ___ (silent).", "silently", "Adverb bildet man meist mit -ly: silent → silently."),
+        mkGapCard("This laptop is ___ (expensive) than that one.", "more expensive", "Bei längeren Adjektiven: more + Adjektiv (nicht -er anhängen)."),
+        mkGapCard("This is ___ (interesting) book I have ever read.", "the most interesting", "Bei längeren Adjektiven: the most + Adjektiv (nicht -est anhängen)."),
+        mkGapCard("Public transport here is ___ (bad) than in Berlin.", "worse", "Unregelmäßiger Komparativ: bad - worse - worst."),
+        mkGapCard("I don't have ___ money left.", "any", "In verneinten Sätzen: any (nicht some)."),
+        mkGapCard("Is there ___ who can help me?", "anyone", "In Fragen: any-Wörter (anyone, anything...)."),
+        mkGapCard("I have ___ interesting to tell you.", "something", "In positiven Aussagesätzen: some-Wörter (something, someone...)."),
+        mkGapCard("There isn't ___ time left.", "much", "Bei nicht zählbaren Nomen (time, money...): much."),
+        mkGapCard("We don't have ___ apples.", "many", "Bei zählbaren Nomen (apples, tickets...): many."),
+        mkGapCard("He hasn't got ___ money.", "much", "'Money' ist nicht zählbar: much (nicht many).")
+      ]
+    };
+    state.decks.push(deck);
+    save();
+  }
 
   function save() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -314,17 +373,23 @@
       ]));
     } else {
       var table = el("table", {class: "cards"});
-      var thead = el("tr", {}, [el("th", {}, ["Deutsch"]), el("th", {}, ["Englisch"]), el("th", {}, ["Status"]), el("th", {}, [""])]);
+      var thead = el("tr", {}, [el("th", {}, ["Typ"]), el("th", {}, ["Frage / Vorderseite"]), el("th", {}, ["Antwort / Rückseite"]), el("th", {}, ["Status"]), el("th", {}, [""])]);
       table.appendChild(thead);
       deck.cards.forEach(function(card){
         var status = cardStatus(card);
         var statusLabel = status === "new" ? "Neu" : (status === "learning" ? "Lernen (" + card.streak + "/" + MASTER_STREAK + ")" : "Gelernt ✓");
         var statusClass = status === "new" ? "new" : (status === "learning" ? "learning" : "mastered");
+        var typeSelect = el("select", {class: "type-select", onchange: function(e){ card.type = e.target.value; save(); render(); }}, [
+          el("option", {value: "vocab"}, ["🔤 Vokabel"]),
+          el("option", {value: "gap"}, ["✏️ Lückentext"])
+        ]);
+        typeSelect.value = card.type || "vocab";
         var deInput = el("input", {type: "text", value: card.de, onchange: function(e){ card.de = e.target.value; save(); }});
         deInput.value = card.de;
         var enInput = el("input", {type: "text", value: card.en, onchange: function(e){ card.en = e.target.value; save(); }});
         enInput.value = card.en;
         var tr = el("tr", {}, [
+          el("td", {}, [typeSelect]),
           el("td", {}, [deInput]),
           el("td", {}, [enInput]),
           el("td", {}, [el("span", {class: "status-badge pill " + statusClass}, [statusLabel])]),
@@ -336,11 +401,12 @@
     }
     app.appendChild(box);
 
-    box.appendChild(el("div", {class: "row", style: "margin-top:12px;"}));
     var addRow = el("div", {class: "row", style: "margin-top: 14px;"}, [
-      el("button", {class: "btn secondary", onclick: function(){ deck.cards.push(mkCard("", "")); save(); render(); }}, ["+ Leere Karte hinzufügen"])
+      el("button", {class: "btn secondary", onclick: function(){ deck.cards.push(mkCard("", "")); save(); render(); }}, ["+ Leere Vokabelkarte"]),
+      el("button", {class: "btn secondary", onclick: function(){ deck.cards.push(mkGapCard("Satz mit ___ als Lücke", "Lösung")); save(); render(); }}, ["+ Lückentext-Aufgabe"])
     ]);
     app.appendChild(addRow);
+    app.appendChild(el("div", {class: "hint", style: "margin-top:8px;"}, ["Bei Lückentext-Aufgaben: links der Satz mit \"___\" als Lücke, rechts die richtige Lösung. Beim Lernen wird die Lösung per Tastatur eingetippt."]));
   }
 
   // ---------- New deck modal ----------
@@ -465,7 +531,9 @@
       queue: pool.map(function(c){ return c.id; }),
       masteredThisSession: 0,
       flipped: false,
-      currentDirection: state.direction
+      currentDirection: state.direction,
+      gapSubmitted: false,
+      gapValue: ""
     };
     state.view = { name: "study" };
     render();
@@ -521,19 +589,34 @@
     var card = deck.cards.filter(function(c){ return c.id === currentId; })[0];
     if (!card) { session.queue.shift(); render(); return; }
 
-    if (!session.cardDirection) session.cardDirection = pickDirection();
-    var direction = session.cardDirection;
-    var front = direction === "de-en" ? card.de : card.en;
-    var back = direction === "de-en" ? card.en : card.de;
-    var frontTag = direction === "de-en" ? "DEUTSCH" : "ENGLISCH";
-    var backTag = direction === "de-en" ? "ENGLISCH" : "DEUTSCH";
-
     var doneCount = session.totalToLearn - countRemaining(deck);
     var progressPct = session.totalToLearn === 0 ? 100 : Math.round((doneCount / session.totalToLearn) * 100);
 
     var studyWrap = el("div", {class: "study-wrap"});
     studyWrap.appendChild(el("div", {class: "progress-bar-bg"}, [el("div", {class: "progress-bar-fill", style: "width:" + progressPct + "%"})]));
     studyWrap.appendChild(el("div", {class: "progress-label"}, [doneCount + " / " + session.totalToLearn + " gelernt in dieser Sitzung"]));
+
+    if (card.type === "gap") {
+      directionToggle.style.display = "none";
+      renderGapCard(studyWrap, card);
+    } else {
+      renderVocabCard(studyWrap, card);
+    }
+
+    app.appendChild(studyWrap);
+
+    function mkDirBtn(val, label) {
+      return el("button", {class: val === state.direction ? "active" : "", onclick: function(){ state.direction = val; save(); render(); }}, [label]);
+    }
+  }
+
+  function renderVocabCard(studyWrap, card) {
+    if (!session.cardDirection) session.cardDirection = pickDirection();
+    var direction = session.cardDirection;
+    var front = direction === "de-en" ? card.de : card.en;
+    var back = direction === "de-en" ? card.en : card.de;
+    var frontTag = direction === "de-en" ? "DEUTSCH" : "ENGLISCH";
+    var backTag = direction === "de-en" ? "ENGLISCH" : "DEUTSCH";
 
     var scene = el("div", {class: "flip-scene"});
     var flipCard = el("div", {class: "flip-card" + (session.flipped ? " flipped" : ""), onclick: function(){ session.flipped = !session.flipped; render(); }}, [
@@ -558,11 +641,38 @@
     } else {
       studyWrap.appendChild(el("div", {class: "hint"}, ["Karte anklicken um die Antwort zu sehen"]));
     }
+  }
 
-    app.appendChild(studyWrap);
+  function renderGapCard(studyWrap, card) {
+    var box = el("div", {class: "gap-box"});
+    box.appendChild(el("div", {class: "lang-tag-static"}, ["LÜCKENTEXT"]));
+    box.appendChild(el("div", {class: "gap-sentence"}, [card.de]));
+    if (card.note) box.appendChild(el("div", {class: "gap-tip"}, ["💡 " + card.note]));
 
-    function mkDirBtn(val, label) {
-      return el("button", {class: val === state.direction ? "active" : "", onclick: function(){ state.direction = val; save(); render(); }}, [label]);
+    if (!session.gapSubmitted) {
+      var input = el("input", {type: "text", class: "gap-input", placeholder: "Antwort eintippen...", onkeydown: function(e){ if (e.key === "Enter") submit(); }});
+      input.value = session.gapValue || "";
+      input.addEventListener("input", function(e){ session.gapValue = e.target.value; });
+      box.appendChild(input);
+      box.appendChild(el("button", {class: "btn", style: "margin-top:10px; width:100%;", onclick: submit}, ["Prüfen"]));
+      studyWrap.appendChild(box);
+      setTimeout(function(){ input.focus(); }, 30);
+    } else {
+      var isCorrect = normalizeAnswer(session.gapValue) === normalizeAnswer(card.en);
+      box.appendChild(el("div", {class: "gap-feedback " + (isCorrect ? "correct" : "incorrect")}, [
+        el("div", {}, ["Deine Antwort: " + (session.gapValue || "(leer)")]),
+        el("div", {}, ["Richtige Antwort: " + card.en])
+      ]));
+      studyWrap.appendChild(box);
+      studyWrap.appendChild(el("div", {class: "answer-buttons"}, [
+        el("button", {class: "btn danger", onclick: function(){ answerCard(card, false); }}, ["✕ Falsch"]),
+        el("button", {class: "btn", style: "background:var(--green);", onclick: function(){ answerCard(card, true); }}, ["✓ Richtig"])
+      ]));
+    }
+
+    function submit() {
+      session.gapSubmitted = true;
+      render();
     }
   }
 
@@ -585,6 +695,8 @@
     session.queue.shift();
     session.flipped = false;
     session.cardDirection = null;
+    session.gapSubmitted = false;
+    session.gapValue = "";
 
     if (card.streak >= MASTER_STREAK) {
       session.masteredThisSession++;
