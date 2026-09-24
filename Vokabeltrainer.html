@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vokabeltrainer</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --card-bg: #ffffff;
+    --text: #1a1a2e;
+    --muted: #6b7280;
+    --primary: #4f46e5;
+    --primary-dark: #4338ca;
+    --green: #16a34a;
+    --green-bg: #dcfce7;
+    --red: #dc2626;
+    --red-bg: #fee2e2;
+    --border: #e5e7eb;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  .app { max-width: 900px; margin: 0 auto; padding: 24px 16px 80px; }
+  header.top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+  }
+  header.top h1 { font-size: 1.5rem; margin: 0; }
+  header.top h1 span { color: var(--primary); }
+  .btn {
+    background: var(--primary); color: white; border: none; border-radius: 8px;
+    padding: 10px 16px; font-size: 0.95rem; cursor: pointer; font-weight: 600;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: var(--primary-dark); }
+  .btn.secondary { background: white; color: var(--text); border: 1px solid var(--border); }
+  .btn.secondary:hover { background: #f0f0f3; }
+  .btn.danger { background: var(--red-bg); color: var(--red); }
+  .btn.danger:hover { background: #fecaca; }
+  .btn.ghost { background: transparent; color: var(--muted); padding: 6px 10px; }
+  .btn.ghost:hover { background: #eceef2; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+  .card-box {
+    background: var(--card-bg); border-radius: 14px; padding: 20px;
+    box-shadow: var(--shadow); margin-bottom: 16px;
+  }
+
+  /* Deck list */
+  .deck-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+  .deck-tile {
+    background: var(--card-bg); border-radius: 14px; padding: 18px; cursor: pointer;
+    box-shadow: var(--shadow); transition: transform 0.1s;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .deck-tile:hover { transform: translateY(-2px); }
+  .deck-tile h3 { margin: 0; font-size: 1.1rem; }
+  .deck-tile .meta { color: var(--muted); font-size: 0.85rem; }
+  .stat-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pill { font-size: 0.75rem; padding: 3px 8px; border-radius: 999px; font-weight: 600; }
+  .pill.new { background: #e0e7ff; color: #4338ca; }
+  .pill.learning { background: #fef3c7; color: #b45309; }
+  .pill.mastered { background: var(--green-bg); color: var(--green); }
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+
+  /* Deck detail table */
+  table.cards { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  table.cards th { text-align: left; padding: 8px; color: var(--muted); border-bottom: 1px solid var(--border); font-weight: 600; }
+  table.cards td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.cards tr:last-child td { border-bottom: none; }
+  .status-badge { font-size: 0.72rem; padding: 2px 7px; border-radius: 999px; font-weight: 600; white-space: nowrap; }
+  table.cards input[type=text] { width: 100%; border: 1px solid transparent; background: transparent; padding: 4px; border-radius: 6px; font-size: 0.92rem; font-family: inherit; }
+  table.cards input[type=text]:focus { border-color: var(--border); background: white; outline: none; }
+
+  textarea, input[type=text] {
+    font-family: inherit; font-size: 0.95rem; padding: 10px; border-radius: 8px;
+    border: 1px solid var(--border); width: 100%;
+  }
+  textarea:focus, input[type=text]:focus { outline: 2px solid #c7d2fe; border-color: var(--primary); }
+  label.field-label { font-size: 0.85rem; font-weight: 600; color: var(--muted); display: block; margin-bottom: 6px; }
+
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex;
+    align-items: center; justify-content: center; padding: 16px; z-index: 50;
+  }
+  .modal {
+    background: white; border-radius: 14px; padding: 24px; max-width: 560px; width: 100%;
+    max-height: 90vh; overflow-y: auto;
+  }
+  .modal h2 { margin-top: 0; }
+  .modal .field { margin-bottom: 16px; }
+  .hint { font-size: 0.82rem; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+
+  /* Study view */
+  .study-wrap { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+  .progress-bar-bg { width: 100%; max-width: 480px; height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: var(--primary); transition: width 0.2s; }
+  .progress-label { font-size: 0.85rem; color: var(--muted); }
+  .flip-scene { width: 100%; max-width: 480px; height: 280px; perspective: 1200px; }
+  .flip-card {
+    width: 100%; height: 100%; position: relative; transform-style: preserve-3d;
+    transition: transform 0.4s; cursor: pointer;
+  }
+  .flip-card.flipped { transform: rotateY(180deg); }
+  .flip-face {
+    position: absolute; inset: 0; backface-visibility: hidden; border-radius: 18px;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    padding: 24px; text-align: center; box-shadow: var(--shadow); background: white;
+  }
+  .flip-face .lang-tag { position: absolute; top: 14px; left: 18px; font-size: 0.75rem; font-weight: 700; color: var(--muted); letter-spacing: 0.05em; }
+  .flip-face .word { font-size: 1.7rem; font-weight: 700; }
+  .flip-face.back { transform: rotateY(180deg); background: #f8f9ff; }
+  .flip-hint { font-size: 0.8rem; color: var(--muted); }
+  .answer-buttons { display: flex; gap: 12px; width: 100%; max-width: 480px; }
+  .answer-buttons .btn { flex: 1; padding: 14px; font-size: 1rem; }
+  .direction-toggle { display: flex; gap: 6px; background: #eceef2; padding: 4px; border-radius: 999px; }
+  .direction-toggle button {
+    border: none; background: transparent; padding: 6px 14px; border-radius: 999px; cursor: pointer;
+    font-size: 0.85rem; font-weight: 600; color: var(--muted);
+  }
+  .direction-toggle button.active { background: white; color: var(--primary); box-shadow: var(--shadow); }
+  .session-done { text-align: center; padding: 40px 20px; }
+  .session-done .big { font-size: 2.5rem; margin-bottom: 8px; }
+
+  .top-back { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .top-back h2 { margin: 0; font-size: 1.3rem; }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14151f; --card-bg: #1e2030; --text: #e8e8ee; --muted: #9599a8;
+      --border: #2e3040; --primary: #818cf8; --primary-dark: #6366f1;
+      --green: #4ade80; --green-bg: #16341f; --red: #f87171; --red-bg: #3a1a1a;
+      --shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+    .btn.secondary { background: #262838; }
+    .btn.secondary:hover { background: #2e3145; }
+    table.cards input[type=text]:focus { background: #262838; }
+    .direction-toggle { background: #262838; }
+    .direction-toggle button.active { background: #34364a; }
+    .flip-face { background: #1e2030; }
+    .flip-face.back { background: #20233a; }
+    .modal { background: #1e2030; }
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+(function(){
+  "use strict";
+  var STORAGE_KEY = "vokabeltrainer_state_v1";
+  var MASTER_STREAK = 3;
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 9); }
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return null;
+  }
+
+  function defaultState() {
+    return {
+      decks: [
+        {
+          id: uid(),
+          name: "Beispiel-Deck",
+          cards: [
+            mkCard("das Haus", "the house"),
+            mkCard("laufen", "to run"),
+            mkCard("Ich möchte einen Kaffee bestellen.", "I would like to order a coffee.")
+          ]
+        }
+      ],
+      view: { name: "decks" },
+      direction: "mixed"
+    };
+  }
+
+  function mkCard(de, en) {
+    return { id: uid(), de: de, en: en, streak: 0, seen: 0 };
+  }
+
+  var state = loadState() || defaultState();
+
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function getDeck(id) {
+    for (var i = 0; i < state.decks.length; i++) if (state.decks[i].id === id) return state.decks[i];
+    return null;
+  }
+
+  function cardStatus(card) {
+    if (card.streak >= MASTER_STREAK) return "mastered";
+    if (card.seen === 0) return "new";
+    return "learning";
+  }
+
+  function deckStats(deck) {
+    var s = { new: 0, learning: 0, mastered: 0 };
+    deck.cards.forEach(function(c){ s[cardStatus(c)]++; });
+    return s;
+  }
+
+  // ---------- rendering ----------
+  var app = document.getElementById("app");
+
+  function render() {
+    app.innerHTML = "";
+    if (state.view.name === "decks") renderDeckList();
+    else if (state.view.name === "deck") renderDeckDetail(state.view.deckId);
+    else if (state.view.name === "study") renderStudy();
+  }
+
+  function el(tag, attrs, children) {
+    var node = document.createElement(tag);
+    attrs = attrs || {};
+    Object.keys(attrs).forEach(function(k){
+      if (k === "class") node.className = attrs[k];
+      else if (k === "html") node.innerHTML = attrs[k];
+      else if (k.indexOf("on") === 0) node.addEventListener(k.slice(2), attrs[k]);
+      else if (typeof attrs[k] === "boolean") { if (attrs[k]) node.setAttribute(k, ""); }
+      else node.setAttribute(k, attrs[k]);
+    });
+    (children || []).forEach(function(c){
+      if (typeof c === "string") node.appendChild(document.createTextNode(c));
+      else if (c) node.appendChild(c);
+    });
+    return node;
+  }
+
+  function renderDeckList() {
+    var header = el("header", {class: "top"}, [
+      el("h1", {}, ["Vokabel", el("span", {}, ["trainer"])]),
+      el("div", {class: "row"}, [
+        el("button", {class: "btn secondary", onclick: exportBackup}, ["Backup exportieren"]),
+        el("button", {class: "btn secondary", onclick: triggerImportBackup}, ["Backup importieren"]),
+        el("button", {class: "btn", onclick: function(){ openNewDeckModal(); }}, ["+ Neues Deck"])
+      ])
+    ]);
+    app.appendChild(header);
+
+    if (state.decks.length === 0) {
+      app.appendChild(el("div", {class: "empty-state"}, [
+        el("p", {}, ["Noch keine Decks vorhanden."]),
+        el("button", {class: "btn", onclick: function(){ openNewDeckModal(); }}, ["Erstes Deck anlegen"])
+      ]));
+      return;
+    }
+
+    var grid = el("div", {class: "deck-grid"});
+    state.decks.forEach(function(deck){
+      var stats = deckStats(deck);
+      var tile = el("div", {class: "deck-tile", onclick: function(){ state.view = {name:"deck", deckId: deck.id}; render(); }}, [
+        el("h3", {}, [deck.name]),
+        el("div", {class: "meta"}, [deck.cards.length + " Karten"]),
+        el("div", {class: "stat-pills"}, [
+          el("span", {class: "pill new"}, [stats.new + " neu"]),
+          el("span", {class: "pill learning"}, [stats.learning + " lernen"]),
+          el("span", {class: "pill mastered"}, [stats.mastered + " gelernt"])
+        ])
+      ]);
+      grid.appendChild(tile);
+    });
+    app.appendChild(grid);
+  }
+
+  function renderDeckDetail(deckId) {
+    var deck = getDeck(deckId);
+    if (!deck) { state.view = {name:"decks"}; render(); return; }
+    var stats = deckStats(deck);
+    var dueCount = deck.cards.filter(function(c){ return cardStatus(c) !== "mastered"; }).length;
+
+    app.appendChild(el("div", {class: "top-back"}, [
+      el("button", {class: "btn ghost", onclick: function(){ state.view = {name:"decks"}; render(); }}, ["← Alle Decks"])
+    ]));
+
+    var toolbar = el("div", {class: "toolbar"}, [
+      el("div", {}, [
+        el("h2", {}, [deck.name]),
+        el("div", {class: "stat-pills"}, [
+          el("span", {class: "pill new"}, [stats.new + " neu"]),
+          el("span", {class: "pill learning"}, [stats.learning + " lernen"]),
+          el("span", {class: "pill mastered"}, [stats.mastered + " gelernt"])
+        ])
+      ]),
+      el("div", {class: "row"}, [
+        el("button", {class: "btn danger", onclick: function(){ if(confirm("Deck \"" + deck.name + "\" wirklich löschen?")){ state.decks = state.decks.filter(function(d){return d.id!==deck.id;}); state.view={name:"decks"}; save(); render(); } }}, ["Deck löschen"]),
+        el("button", {class: "btn secondary", onclick: function(){ openImportModal(deck.id); }}, ["+ Karten importieren"]),
+        el("button", {class: "btn", disabled: dueCount === 0, onclick: function(){ startStudy(deck.id); }}, [dueCount === 0 ? "Alles gelernt ✓" : "Lernen starten (" + dueCount + ")"])
+      ])
+    ]);
+    app.appendChild(toolbar);
+
+    var box = el("div", {class: "card-box"});
+    if (deck.cards.length === 0) {
+      box.appendChild(el("div", {class: "empty-state"}, [
+        el("p", {}, ["Noch keine Karten in diesem Deck."]),
+        el("button", {class: "btn", onclick: function(){ openImportModal(deck.id); }}, ["Karten importieren"])
+      ]));
+    } else {
+      var table = el("table", {class: "cards"});
+      var thead = el("tr", {}, [el("th", {}, ["Deutsch"]), el("th", {}, ["Englisch"]), el("th", {}, ["Status"]), el("th", {}, [""])]);
+      table.appendChild(thead);
+      deck.cards.forEach(function(card){
+        var status = cardStatus(card);
+        var statusLabel = status === "new" ? "Neu" : (status === "learning" ? "Lernen (" + card.streak + "/" + MASTER_STREAK + ")" : "Gelernt ✓");
+        var statusClass = status === "new" ? "new" : (status === "learning" ? "learning" : "mastered");
+        var deInput = el("input", {type: "text", value: card.de, onchange: function(e){ card.de = e.target.value; save(); }});
+        deInput.value = card.de;
+        var enInput = el("input", {type: "text", value: card.en, onchange: function(e){ card.en = e.target.value; save(); }});
+        enInput.value = card.en;
+        var tr = el("tr", {}, [
+          el("td", {}, [deInput]),
+          el("td", {}, [enInput]),
+          el("td", {}, [el("span", {class: "status-badge pill " + statusClass}, [statusLabel])]),
+          el("td", {}, [el("button", {class: "btn ghost", onclick: function(){ deck.cards = deck.cards.filter(function(c){return c.id!==card.id;}); save(); render(); }}, ["✕"])])
+        ]);
+        table.appendChild(tr);
+      });
+      box.appendChild(table);
+    }
+    app.appendChild(box);
+
+    box.appendChild(el("div", {class: "row", style: "margin-top:12px;"}));
+    var addRow = el("div", {class: "row", style: "margin-top: 14px;"}, [
+      el("button", {class: "btn secondary", onclick: function(){ deck.cards.push(mkCard("", "")); save(); render(); }}, ["+ Leere Karte hinzufügen"])
+    ]);
+    app.appendChild(addRow);
+  }
+
+  // ---------- New deck modal ----------
+  function openNewDeckModal() {
+    var nameInput = el("input", {type: "text", placeholder: "z.B. Unregelmäßige Verben"});
+    var backdrop = el("div", {class: "modal-backdrop", onclick: function(e){ if(e.target===backdrop) closeModal(); }}, [
+      el("div", {class: "modal"}, [
+        el("h2", {}, ["Neues Deck"]),
+        el("div", {class: "field"}, [
+          el("label", {class: "field-label"}, ["Name des Decks"]),
+          nameInput
+        ]),
+        el("div", {class: "row"}, [
+          el("button", {class: "btn", onclick: function(){
+            var name = nameInput.value.trim() || "Neues Deck";
+            var deck = { id: uid(), name: name, cards: [] };
+            state.decks.push(deck);
+            save();
+            closeModal();
+            state.view = {name:"deck", deckId: deck.id};
+            render();
+          }}, ["Erstellen"]),
+          el("button", {class: "btn secondary", onclick: closeModal}, ["Abbrechen"])
+        ])
+      ])
+    ]);
+    document.body.appendChild(backdrop);
+    setTimeout(function(){ nameInput.focus(); }, 30);
+  }
+
+  function closeModal() {
+    var b = document.querySelector(".modal-backdrop");
+    if (b) b.remove();
+  }
+
+  // ---------- Import modal ----------
+  function openImportModal(deckId) {
+    var topicInput = el("input", {type: "text", placeholder: "z.B. Tiere, Reisen (A2), Business-Englisch, Perfekt-Sätze..."});
+    var textArea = el("textarea", {rows: "10", placeholder: "Hund = dog\nKatze = cat\nIch gehe zur Schule. = I go to school."});
+    var promptPreview = el("div", {class: "hint", style: "margin-top:8px; white-space:pre-wrap; background:#f0f0f5; padding:10px; border-radius:8px;"});
+
+    function buildPrompt() {
+      var topic = topicInput.value.trim() || "allgemeine Alltagsvokabeln";
+      return "Erstelle mir 20 Karteikarten zum Thema \"" + topic + "\" für Deutsch-Englisch (Vokabeln oder kurze Sätze, je nach Thema passend). " +
+        "Gib das Ergebnis NUR als Liste aus, eine Karte pro Zeile, exakt in diesem Format:\nDeutsch = Englisch\n" +
+        "Kein zusätzlicher Text, keine Nummerierung, keine Erklärungen.";
+    }
+
+    var promptBox = el("textarea", {rows: "5", readonly: "readonly"});
+    promptBox.value = buildPrompt();
+    topicInput.addEventListener("input", function(){ promptBox.value = buildPrompt(); });
+
+    var backdrop = el("div", {class: "modal-backdrop", onclick: function(e){ if(e.target===backdrop) closeModal(); }}, [
+      el("div", {class: "modal"}, [
+        el("h2", {}, ["Karten importieren"]),
+        el("div", {class: "field"}, [
+          el("label", {class: "field-label"}, ["1. Optional: Prompt für die KI erstellen"]),
+          topicInput,
+          promptBox,
+          el("div", {class: "row", style: "margin-top:8px;"}, [
+            el("button", {class: "btn secondary", onclick: function(){
+              promptBox.select();
+              navigator.clipboard && navigator.clipboard.writeText(promptBox.value);
+              alert("Prompt kopiert! Füge ihn in eine KI (z.B. Claude oder ChatGPT) ein und kopiere die Antwort unten in das Textfeld.");
+            }}, ["📋 Prompt kopieren"])
+          ]),
+          el("div", {class: "hint"}, ["Füge den Prompt in eine beliebige KI ein, kopiere die Antwort und füge sie unten ein."])
+        ]),
+        el("div", {class: "field"}, [
+          el("label", {class: "field-label"}, ["2. Karten einfügen (eine pro Zeile)"]),
+          textArea,
+          el("div", {class: "hint"}, ["Unterstützte Trennzeichen: \"=\", \"-\", \";\" oder Tab. Beispiel: Hund = dog"])
+        ]),
+        el("div", {class: "row"}, [
+          el("button", {class: "btn", onclick: function(){
+            var pairs = parseImportText(textArea.value);
+            if (pairs.length === 0) { alert("Keine gültigen Zeilen gefunden. Format: Deutsch = Englisch"); return; }
+            var deck = getDeck(deckId);
+            pairs.forEach(function(p){ deck.cards.push(mkCard(p.de, p.en)); });
+            save();
+            closeModal();
+            render();
+          }}, ["Importieren"]),
+          el("button", {class: "btn secondary", onclick: closeModal}, ["Abbrechen"])
+        ])
+      ])
+    ]);
+    document.body.appendChild(backdrop);
+  }
+
+  function parseImportText(text) {
+    var lines = text.split("\n");
+    var result = [];
+    var seps = ["\t", " = ", "=", " - ", ";", " – ", "–"];
+    lines.forEach(function(line){
+      line = line.trim();
+      if (!line) return;
+      var parts = null;
+      for (var i = 0; i < seps.length; i++) {
+        var sep = seps[i];
+        var idx = line.indexOf(sep);
+        if (idx > -1) {
+          parts = [line.slice(0, idx).trim(), line.slice(idx + sep.length).trim()];
+          break;
+        }
+      }
+      if (parts && parts[0] && parts[1]) result.push({ de: parts[0], en: parts[1] });
+    });
+    return result;
+  }
+
+  // ---------- Study mode ----------
+  var session = null;
+
+  function startStudy(deckId) {
+    var deck = getDeck(deckId);
+    var pool = deck.cards.filter(function(c){ return cardStatus(c) !== "mastered"; });
+    shuffle(pool);
+    session = {
+      deckId: deckId,
+      totalToLearn: pool.length,
+      queue: pool.map(function(c){ return c.id; }),
+      masteredThisSession: 0,
+      flipped: false,
+      currentDirection: state.direction
+    };
+    state.view = { name: "study" };
+    render();
+  }
+
+  function shuffle(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    }
+  }
+
+  function pickDirection() {
+    if (state.direction === "de-en") return "de-en";
+    if (state.direction === "en-de") return "en-de";
+    return Math.random() < 0.5 ? "de-en" : "en-de";
+  }
+
+  function renderStudy() {
+    var deck = getDeck(session ? session.deckId : null);
+    if (!deck || !session) { state.view = {name:"decks"}; render(); return; }
+
+    app.appendChild(el("div", {class: "top-back"}, [
+      el("button", {class: "btn ghost", onclick: function(){ session = null; state.view = {name:"deck", deckId: deck.id}; render(); }}, ["← Zurück zum Deck"])
+    ]));
+
+    var directionToggle = el("div", {class: "direction-toggle"}, [
+      mkDirBtn("de-en", "DE → EN"),
+      mkDirBtn("mixed", "Gemischt"),
+      mkDirBtn("en-de", "EN → DE")
+    ]);
+
+    var header = el("div", {class: "toolbar"}, [
+      el("h2", {}, [deck.name]),
+      directionToggle
+    ]);
+    app.appendChild(header);
+
+    if (session.queue.length === 0) {
+      var wrap = el("div", {class: "session-done"}, [
+        el("div", {class: "big"}, ["🎉"]),
+        el("h2", {}, ["Sitzung abgeschlossen!"]),
+        el("p", {class: "hint"}, [session.masteredThisSession + " Karte(n) in dieser Sitzung neu gelernt."]),
+        el("div", {class: "row", style: "justify-content:center; margin-top:16px;"}, [
+          el("button", {class: "btn", onclick: function(){ session = null; state.view = {name:"deck", deckId: deck.id}; render(); }}, ["Zurück zum Deck"])
+        ])
+      ]);
+      app.appendChild(wrap);
+      return;
+    }
+
+    var currentId = session.queue[0];
+    var card = deck.cards.filter(function(c){ return c.id === currentId; })[0];
+    if (!card) { session.queue.shift(); render(); return; }
+
+    if (!session.cardDirection) session.cardDirection = pickDirection();
+    var direction = session.cardDirection;
+    var front = direction === "de-en" ? card.de : card.en;
+    var back = direction === "de-en" ? card.en : card.de;
+    var frontTag = direction === "de-en" ? "DEUTSCH" : "ENGLISCH";
+    var backTag = direction === "de-en" ? "ENGLISCH" : "DEUTSCH";
+
+    var doneCount = session.totalToLearn - countRemaining(deck);
+    var progressPct = session.totalToLearn === 0 ? 100 : Math.round((doneCount / session.totalToLearn) * 100);
+
+    var studyWrap = el("div", {class: "study-wrap"});
+    studyWrap.appendChild(el("div", {class: "progress-bar-bg"}, [el("div", {class: "progress-bar-fill", style: "width:" + progressPct + "%"})]));
+    studyWrap.appendChild(el("div", {class: "progress-label"}, [doneCount + " / " + session.totalToLearn + " gelernt in dieser Sitzung"]));
+
+    var scene = el("div", {class: "flip-scene"});
+    var flipCard = el("div", {class: "flip-card" + (session.flipped ? " flipped" : ""), onclick: function(){ session.flipped = !session.flipped; render(); }}, [
+      el("div", {class: "flip-face front"}, [
+        el("div", {class: "lang-tag"}, [frontTag]),
+        el("div", {class: "word"}, [front]),
+        el("div", {class: "flip-hint"}, ["Klicken zum Umdrehen"])
+      ]),
+      el("div", {class: "flip-face back"}, [
+        el("div", {class: "lang-tag"}, [backTag]),
+        el("div", {class: "word"}, [back])
+      ])
+    ]);
+    scene.appendChild(flipCard);
+    studyWrap.appendChild(scene);
+
+    if (session.flipped) {
+      studyWrap.appendChild(el("div", {class: "answer-buttons"}, [
+        el("button", {class: "btn danger", onclick: function(){ answerCard(card, false); }}, ["✕ Falsch"]),
+        el("button", {class: "btn", style: "background:var(--green);", onclick: function(){ answerCard(card, true); }}, ["✓ Richtig"])
+      ]));
+    } else {
+      studyWrap.appendChild(el("div", {class: "hint"}, ["Karte anklicken um die Antwort zu sehen"]));
+    }
+
+    app.appendChild(studyWrap);
+
+    function mkDirBtn(val, label) {
+      return el("button", {class: val === state.direction ? "active" : "", onclick: function(){ state.direction = val; save(); render(); }}, [label]);
+    }
+  }
+
+  function countRemaining(deck) {
+    return session.queue.reduce(function(acc, id){
+      var c = deck.cards.filter(function(cc){ return cc.id === id; })[0];
+      return acc + (c && cardStatus(c) !== "mastered" ? 1 : 0);
+    }, 0);
+  }
+
+  function answerCard(card, correct) {
+    card.seen++;
+    if (correct) {
+      card.streak++;
+    } else {
+      card.streak = 0;
+    }
+    save();
+
+    session.queue.shift();
+    session.flipped = false;
+    session.cardDirection = null;
+
+    if (card.streak >= MASTER_STREAK) {
+      session.masteredThisSession++;
+    } else {
+      var reinsertAt = Math.min(session.queue.length, 2 + Math.floor(Math.random() * 3));
+      session.queue.splice(reinsertAt, 0, card.id);
+    }
+    render();
+  }
+
+  // ---------- Backup export/import ----------
+  function exportBackup() {
+    var blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "vokabeltrainer-backup-" + new Date().toISOString().slice(0,10) + ".json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function triggerImportBackup() {
+    var input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/json";
+    input.onchange = function(){
+      var file = input.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(e){
+        try {
+          var imported = JSON.parse(e.target.result);
+          if (!imported.decks) throw new Error("invalid");
+          if (confirm("Backup importieren? Dies ersetzt alle aktuellen Decks.")) {
+            state = imported;
+            save();
+            render();
+          }
+        } catch (err) {
+          alert("Datei konnte nicht gelesen werden. Ist es eine gültige Backup-Datei?");
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
