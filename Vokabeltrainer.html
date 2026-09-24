@@ -215,6 +215,7 @@
 
   var state = loadState() || defaultState();
   seedWeaknessDeck();
+  seedAdjAdvDeck();
 
   function seedWeaknessDeck() {
     if (state.seededKlausurFeedback) return;
@@ -248,6 +249,39 @@
         mkGapCard("There isn't ___ time left.", "much", "Bei nicht zählbaren Nomen (time, money...): much."),
         mkGapCard("We don't have ___ apples.", "many", "Bei zählbaren Nomen (apples, tickets...): many."),
         mkGapCard("He hasn't got ___ money.", "much", "'Money' ist nicht zählbar: much (nicht many).")
+      ]
+    };
+    state.decks.push(deck);
+    save();
+  }
+
+  function seedAdjAdvDeck() {
+    if (state.seededAdjAdvDeck) return;
+    state.seededAdjAdvDeck = true;
+    var deck = {
+      id: uid(),
+      name: "Adjektiv oder Adverb? (Übung)",
+      cards: [
+        mkGapCard("The new trainee climbed up the ladder ___ (careful).", "carefully", "Adverb (beschreibt WIE er kletterte, -ly anhängen)."),
+        mkGapCard("She is a very ___ (careful) worker.", "careful", "Adjektiv (beschreibt das Nomen 'worker', kein -ly)."),
+        mkGapCard("He answered the question ___ (quick).", "quickly", "Adverb: beschreibt WIE er antwortete."),
+        mkGapCard("She sings ___ (beautiful).", "beautifully", "Adverb: y bleibt vor -ly erhalten, wenn davor ein Konsonant steht (beautiful+ly)."),
+        mkGapCard("The children were playing ___ (happy) in the garden.", "happily", "Adverb-Bildung bei y am Wortende: happy → happily (y wird zu i)."),
+        mkGapCard("It was ___ (easy) the best day of the year.", "easily", "Adverb-Bildung: easy → easily (y wird zu i)."),
+        mkGapCard("This is ___ (probable) true.", "probably", "Adverb-Bildung bei -le am Wortende: probable → probably."),
+        mkGapCard("The system works nearly ___ (automatic).", "automatically", "Adverb-Bildung bei -ic am Wortende: meist -ally (automatic → automatically)."),
+        mkGapCard("He speaks English very ___ (good).", "well", "Unregelmäßig: good (Adjektiv) → well (Adverb). 'Gooder'/'goodly' gibt es nicht!"),
+        mkGapCard("This cake tastes really ___ (good).", "good", "Nach Sinnesverben (taste, smell, look, feel, sound) folgt ein ADJEKTIV, kein Adverb: 'tastes good', nicht 'tastes well'."),
+        mkGapCard("She looked at me very ___ (strange).", "strangely", "Adverb: 'looked at me' ist eine Handlung (WIE hat sie geschaut)."),
+        mkGapCard("She looked ___ (strange) today, is she ok?", "strange", "Adjektiv: hier bedeutet 'look' = wirken/aussehen, danach folgt ein Adjektiv."),
+        mkGapCard("He works really ___ (hard).", "hard", "Unregelmäßig: 'hard' ist als Adverb identisch mit dem Adjektiv (nicht 'hardly')."),
+        mkGapCard("I could ___ (hard) hear you, the line was so bad.", "hardly", "Achtung Falle: 'hardly' bedeutet 'kaum', nicht 'hart/schwer'!"),
+        mkGapCard("The train arrived ___ (late) again.", "late", "Unregelmäßig: 'late' bleibt als Adverb gleich (nicht 'lately')."),
+        mkGapCard("I haven't seen him ___ (late), have you?", "lately", "Achtung Falle: 'lately' bedeutet 'in letzter Zeit', nicht 'spät'!"),
+        mkGapCard("Our football team played really ___ (bad) last Sunday.", "badly", "Unregelmäßig: bad (Adjektiv) → badly (Adverb)."),
+        mkGapCard("I am ___ (extreme) tired today.", "extremely", "Adverb, das ein Adjektiv verstärkt (extremely tired)."),
+        mkGapCard("Pete was ___ (terrible) upset about losing his job.", "terribly", "Adverb, das ein Adjektiv verstärkt (terribly upset)."),
+        mkGapCard("The new printer works nearly ___ (silent).", "silently", "Adverb: beschreibt WIE der Drucker arbeitet.")
       ]
     };
     state.decks.push(deck);
